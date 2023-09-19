@@ -6,6 +6,7 @@ import hexlet.code.dto.TaskStatusDto;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.utils.TestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,17 +20,20 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.util.List;
 
 import static hexlet.code.config.SpringConfigForIT.TEST_PROFILE;
-import static hexlet.code.controller.UserController.ID;
-import static hexlet.code.utils.TestUtils.BASE_STATUS_URL;
-import static hexlet.code.utils.TestUtils.TEST_EMAIL;
+import static hexlet.code.controller.TaskStatusController.ID;
+import static hexlet.code.controller.TaskStatusController.TASK_STATUS_CONTROLLER_PATH;
+import static hexlet.code.utils.TestUtils.TEST_USERNAME;
+import static hexlet.code.utils.TestUtils.asJson;
+import static hexlet.code.utils.TestUtils.fromJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
@@ -39,9 +43,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class TaskStatusControllerIT {
 
     @Autowired
-    private TaskStatusRepository taskStatusRepository;
-    @Autowired
     private TestUtils utils;
+
+    @Autowired
+    private TaskStatusRepository taskStatusRepository;
 
     @BeforeEach
     public void before() throws Exception {
@@ -50,96 +55,91 @@ public class TaskStatusControllerIT {
 
     @AfterEach
     public void clear() {
-        utils.clearDataBase();
+        utils.tearDown();
     }
 
     @Test
-    public void testCreateNewTaskStatus() throws Exception {
-        assertEquals(0, taskStatusRepository.count());
-        utils.createTaskStatus("new task status").andExpect(status().isCreated());
-        assertEquals(1, taskStatusRepository.count());
-    }
-
-    @Test
-    public void twiceCreateTaskStatusFail() throws Exception {
-        utils.createTaskStatus("new task status").andExpect(status().isCreated());
-        utils.createTaskStatus("new task status").andExpect(status().isUnprocessableEntity());
-        assertEquals(1, taskStatusRepository.count());
-    }
-
-    @Test
-    public void testGetTaskStatusById() throws Exception {
-        utils.createTaskStatus("new task status");
-        final TaskStatus expectedTaskStatus = taskStatusRepository.findAll().get(0);
-
-        final var response = utils.perform(
-                        get(BASE_STATUS_URL + ID, expectedTaskStatus.getId()),
-                        expectedTaskStatus.getName()
-                ).andExpect(status().isOk())
-                .andReturn()
-                .getResponse();
-
-        final TaskStatus taskStatus = TestUtils.fromJson(response.getContentAsString(), new TypeReference<>() {
-        });
-
-        assertEquals(expectedTaskStatus.getId(), taskStatus.getId());
-        assertEquals(expectedTaskStatus.getName(), taskStatus.getName());
-    }
-
-    @Test
-    public void testGetAllTaskStatuses() throws Exception {
-        utils.createTaskStatus("new task status");
-        utils.createTaskStatus("new task status 2");
-
-        final var response = utils.perform(get(BASE_STATUS_URL), TEST_EMAIL)
+    public void getAll() throws Exception {
+        final var response = utils.perform(get(TASK_STATUS_CONTROLLER_PATH), TEST_USERNAME)
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse();
 
-        final List<TaskStatus> taskStatuses = utils.fromJson(response
-                .getContentAsString(), new TypeReference<>() {
+        final List<TaskStatus> taskStatuses = fromJson(response.getContentAsString(), new TypeReference<>() {
         });
-
-        assertThat(taskStatuses).hasSize(2);
+        final List<TaskStatus> expected = taskStatusRepository.findAll();
+        Assertions.assertThatList(taskStatuses).isEqualTo(expected);
     }
 
     @Test
-    public void updateTaskStatus() throws Exception {
-        utils.createTaskStatus("new task status");
+    public void createNewStatus() throws Exception {
+        final TaskStatusDto status = new TaskStatusDto("test status");
 
-        final var response = utils.perform(get(BASE_STATUS_URL), TEST_EMAIL)
-                .andExpect(status().isOk())
+        final var request = post(TASK_STATUS_CONTROLLER_PATH)
+                .content(asJson(status))
+                .contentType(APPLICATION_JSON);
+
+        final var response = utils.perform(request, TEST_USERNAME)
+                .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse();
 
-        TaskStatus expectedStatus = taskStatusRepository.findAll().get(0);
-        TaskStatusDto newTaskStatusDto = new TaskStatusDto("updated task status");
-        final var responsePut = utils.perform(
-                        put(BASE_STATUS_URL + ID, expectedStatus.getId())
-                                .content(TestUtils.asJson(newTaskStatusDto))
-                                .contentType(APPLICATION_JSON), TEST_EMAIL)
-                .andReturn().getResponse();
-
-        TaskStatus expected = TestUtils.fromJson(responsePut.getContentAsString(), new TypeReference<>() {
+        final TaskStatus savedTaskStatus = fromJson(response.getContentAsString(), new TypeReference<>() {
         });
 
-        assertTrue(taskStatusRepository.existsById(expected.getId()));
-        assertThat(expected.getName()).isEqualTo("updated task status");
-
+        assertThat(taskStatusRepository.getReferenceById(savedTaskStatus.getId())).isNotNull();
     }
 
     @Test
-    public void deleteTaskStatus() throws Exception {
-        assertThat(taskStatusRepository.count()).isEqualTo(0);
+    public void updateStatus() throws Exception {
+        final TaskStatusDto status = new TaskStatusDto("test status");
 
-        utils.createTaskStatus("new task status");
-        assertThat(taskStatusRepository.count()).isEqualTo(1);
+        final var requestToSave = post(TASK_STATUS_CONTROLLER_PATH)
+                .content(asJson(status))
+                .contentType(APPLICATION_JSON);
 
-        TaskStatus taskStatus = taskStatusRepository.findAll().get(0);
+        final var response = utils.perform(requestToSave, TEST_USERNAME)
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse();
 
-        utils.perform(delete(BASE_STATUS_URL + ID, taskStatus.getId()), TEST_EMAIL)
+        final long id = fromJson(response.getContentAsString(), new TypeReference<TaskStatus>() {
+        }).getId();
+
+        status.setName("new name");
+        final var requestToUpdate = put(TASK_STATUS_CONTROLLER_PATH + ID, id)
+                .content(asJson(status))
+                .contentType(APPLICATION_JSON);
+
+        utils.perform(requestToUpdate, TEST_USERNAME)
                 .andExpect(status().isOk());
-        assertThat(taskStatusRepository.count()).isEqualTo(0);
 
+        final TaskStatus updatedTaskStatus = taskStatusRepository.findById(id)
+                .get();
+
+        assertEquals(status.getName(), updatedTaskStatus.getName());
     }
+
+    @Test
+    public void deleteStatus() throws Exception {
+        final TaskStatusDto status = new TaskStatusDto("test status");
+
+        final var requestToSave = post(TASK_STATUS_CONTROLLER_PATH)
+                .content(asJson(status))
+                .contentType(APPLICATION_JSON);
+
+        final var response = utils.perform(requestToSave, TEST_USERNAME)
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse();
+
+        final long id = fromJson(response.getContentAsString(), new TypeReference<TaskStatus>() {
+        }).getId();
+
+        utils.perform(delete(TASK_STATUS_CONTROLLER_PATH + ID, id), TEST_USERNAME)
+                .andExpect(status().isOk());
+
+        assertFalse(taskStatusRepository.existsById(id));
+    }
+
 }

@@ -8,6 +8,7 @@ import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.LabelRepository;
+import hexlet.code.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final UserService userService;
+    private final UserRepository userRepository;
     private final TaskStatusService taskStatusService;
     private final LabelRepository labelRepository;
 
@@ -63,7 +65,7 @@ public class TaskServiceImpl implements TaskService {
         final TaskStatus taskStatus = taskStatusService.getTaskStatusById(taskDTO.getTaskStatusId());
         final Long executorId = taskDTO.getExecutorId();
         if (executorId != null) {
-            task.setExecutor(userService.getUserById(executorId));
+            task.setExecutor(userRepository.findById(executorId).get());
         }
         if (taskDTO.getLabelIds() != null) {
             final Set<Label> labels = new HashSet<>(labelRepository.findAllById(taskDTO.getLabelIds()));

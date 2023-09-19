@@ -1,33 +1,34 @@
 package hexlet.code.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.Lob;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-
 import java.util.Date;
 import java.util.Set;
 
-import static javax.persistence.GenerationType.IDENTITY;
-import static javax.persistence.TemporalType.TIMESTAMP;
+import static jakarta.persistence.GenerationType.IDENTITY;
+import static jakarta.persistence.TemporalType.TIMESTAMP;
 
 @Entity
 @Table(name = "tasks")
+@Builder
 @Getter
 @Setter
 @NoArgsConstructor
@@ -48,7 +49,7 @@ public class Task {
 
     @ManyToOne
     @JoinColumn(name = "task_status_id", referencedColumnName = "id")
-    @NotNull(message = "Task status cannot be Empty")
+//    @NotNull(message = "Task status cannot be Empty")
     private TaskStatus taskStatus;
 
     @ManyToOne
@@ -62,6 +63,7 @@ public class Task {
 
     @CreationTimestamp
     @Temporal(TIMESTAMP)
+    @Column(name = "created_at")
     private Date createdAt;
 
     @ManyToMany

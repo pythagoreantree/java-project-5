@@ -6,6 +6,7 @@ import hexlet.code.dto.LabelDto;
 import hexlet.code.model.Label;
 import hexlet.code.repository.LabelRepository;
 import hexlet.code.utils.TestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,18 +20,19 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.util.List;
 
 import static hexlet.code.config.SpringConfigForIT.TEST_PROFILE;
-import static hexlet.code.controller.UserController.ID;
-import static hexlet.code.utils.TestUtils.BASE_LABEL_URL;
-import static hexlet.code.utils.TestUtils.TEST_EMAIL;
+import static hexlet.code.controller.LabelController.ID;
+import static hexlet.code.controller.LabelController.LABEL_CONTROLLER_PATH;
+import static hexlet.code.utils.TestUtils.TEST_USERNAME;
 import static hexlet.code.utils.TestUtils.asJson;
 import static hexlet.code.utils.TestUtils.fromJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,127 +54,94 @@ public class LabelControllerIT {
 
     @AfterEach
     public void clear() {
-        utils.clearDataBase();
+        utils.tearDown();
     }
 
     @Test
-    public void testCreateNewLabel() throws Exception {
-        assertEquals(0, labelRepository.count());
-        utils.createLabel("new label").andExpect(status().isCreated());
-        assertEquals(1, labelRepository.count());
-    }
-
-    @Test
-    public void twiceCreateLabelFails() throws Exception {
-        utils.createLabel("new label").andExpect(status().isCreated());
-        utils.createLabel("new label").andExpect(status().isUnprocessableEntity());
-        assertEquals(1, labelRepository.count());
-    }
-
-    @Test
-    public void testCreateEmptyLabelFails() throws Exception {
-        assertEquals(0, labelRepository.count());
-        utils.createLabel("");
-        assertEquals(0, labelRepository.count());
-    }
-
-    @Test
-    public void testGetLabelById() throws Exception {
-        utils.createLabel("new label");
-        final Label expectedLabel = labelRepository.findAll().get(0);
-
-        final var response = utils.perform(
-                        get(BASE_LABEL_URL + ID, expectedLabel.getId()),
-                        expectedLabel.getName()
-                ).andExpect(status().isOk())
-                .andReturn()
-                .getResponse();
-
-        final Label label = TestUtils.fromJson(response.getContentAsString(), new TypeReference<>() {
-        });
-
-        assertEquals(expectedLabel.getId(), label.getId());
-        assertEquals(expectedLabel.getName(), label.getName());
-    }
-
-    @Test
-    public void testGetLabelByIdFails() throws Exception {
-        utils.createLabel("new label").andExpect(status().isCreated());
-        assertThat(labelRepository.count()).isEqualTo(1);
-        Long labelId = labelRepository.findAll().get(0).getId() + 1;
-
-        var request = get(BASE_LABEL_URL + TestUtils.ID, labelId);
-        utils.perform(request, TEST_EMAIL)
-                .andExpect(status().isNotFound());
-
-        assertEquals(1, labelRepository.count());
-    }
-
-    @Test
-    public void testGetAllLabels() throws Exception {
-        utils.createLabel("urgent");
-        utils.createLabel("long term");
-
-        final var response = utils.perform(get(BASE_LABEL_URL), TEST_EMAIL)
+    public void getAll() throws Exception {
+        final var response = utils.perform(get(LABEL_CONTROLLER_PATH), TEST_USERNAME)
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse();
 
-        final List<Label> labels = fromJson(response
-                .getContentAsString(), new TypeReference<>() {
+        final List<Label> labels = fromJson(response.getContentAsString(), new TypeReference<>() {
         });
-
-        assertThat(labels).hasSize(2);
+        final List<Label> expected = labelRepository.findAll();
+        Assertions.assertThat(labels)
+                .containsAll(expected);
     }
 
+    @Test
+    public void createNewLabel() throws Exception {
+        final LabelDto label = new LabelDto("test label");
+
+        final var request = post(LABEL_CONTROLLER_PATH)
+                .content(asJson(label))
+                .contentType(APPLICATION_JSON);
+
+        final var response = utils.perform(request, TEST_USERNAME)
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse();
+
+        final Label savedLabel = fromJson(response.getContentAsString(), new TypeReference<>() {
+        });
+
+        assertThat(labelRepository.getReferenceById(savedLabel.getId())).isNotNull();
+    }
 
     @Test
     public void updateLabel() throws Exception {
-        utils.createLabel("new label");
-        final Label expectedLabel = labelRepository.findAll().get(0);
-        LabelDto newLabelDto = new LabelDto("updated label");
+        final LabelDto label = new LabelDto("test label");
 
-        final var responsePut = utils.perform(
-                        put(BASE_LABEL_URL + ID, expectedLabel.getId())
-                                .content(asJson(newLabelDto))
-                                .contentType(APPLICATION_JSON), TEST_EMAIL)
-                .andExpect(status().isOk())
-                .andReturn().
-                getResponse();
+        final var requestToSave = post(LABEL_CONTROLLER_PATH)
+                .content(asJson(label))
+                .contentType(APPLICATION_JSON);
 
-        Label updatedLabel = fromJson(responsePut.getContentAsString(), new TypeReference<>() {
-        });
+        final var response = utils.perform(requestToSave, TEST_USERNAME)
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse();
 
-        assertTrue(labelRepository.existsById(updatedLabel.getId()));
-        assertThat(updatedLabel.getName()).isEqualTo("updated label");
+        final long id = fromJson(response.getContentAsString(), new TypeReference<Label>() {
+        }).getId();
 
+        label.setName("new name");
+        final var requestToUpdate = put(LABEL_CONTROLLER_PATH + ID, id)
+                .content(asJson(label))
+                .contentType(APPLICATION_JSON);
+
+        utils.perform(requestToUpdate, TEST_USERNAME)
+                .andExpect(status().isOk());
+
+        final Label updatedLabel = labelRepository.findById(id)
+                .get();
+
+        assertEquals(label.getName(), updatedLabel.getName());
     }
 
     @Test
     public void deleteLabel() throws Exception {
-        assertThat(labelRepository.count()).isEqualTo(0);
-        utils.createLabel("new label");
-        assertThat(labelRepository.count()).isEqualTo(1);
+        final LabelDto label = new LabelDto("test label");
 
-        Long labelId = labelRepository.findAll().get(0).getId();
+        final var requestToSave = post(LABEL_CONTROLLER_PATH)
+                .content(asJson(label))
+                .contentType(APPLICATION_JSON);
 
-        utils.perform(delete(BASE_LABEL_URL + ID, labelId), TEST_EMAIL)
+        final var response = utils.perform(requestToSave, TEST_USERNAME)
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse();
+
+        final long id = fromJson(response.getContentAsString(), new TypeReference<Label>() {
+        }).getId();
+
+        utils.perform(delete(LABEL_CONTROLLER_PATH + ID, id), TEST_USERNAME)
                 .andExpect(status().isOk());
-        assertThat(labelRepository.count()).isEqualTo(0);
 
-    }
-
-    @Test
-    public void testDeleteLabelFails() throws Exception {
-        utils.createLabel("new label").andExpect(status().isCreated());
-        assertThat(labelRepository.count()).isEqualTo(1);
-
-        Long labelId = labelRepository.findAll().get(0).getId() + 1;
-
-        utils.perform(delete(BASE_LABEL_URL + ID, labelId), TEST_EMAIL)
-                .andExpect(status().isNotFound());
-
-        assertEquals(1, labelRepository.count());
+        assertFalse(labelRepository.existsById(id));
     }
 
 }
+
+

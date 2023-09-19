@@ -1,68 +1,55 @@
 package hexlet.code.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.component.JWTHelper;
-import hexlet.code.dto.LoginDto;
-import java.io.IOException;
-import java.util.Map;
-import java.util.stream.Collectors;
-import javax.servlet.FilterChain;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
 
 
-public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
+@Component
+@RequiredArgsConstructor
+public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private final UserDetailsService userDetailsService;
+
     private final JWTHelper jwtHelper;
 
-    public JWTAuthenticationFilter(final AuthenticationManager authenticationManager,
-                                   final RequestMatcher loginRequest,
-                                   final JWTHelper jwtHelper) {
-        super(authenticationManager);
-        super.setRequiresAuthenticationRequestMatcher(loginRequest);
-        this.jwtHelper = jwtHelper;
-    }
+    private static final String BEARER = "Bearer";
 
     @Override
-    public Authentication attemptAuthentication(final HttpServletRequest request,
-                                                final HttpServletResponse response) throws AuthenticationException {
-        final LoginDto loginData = getLoginData(request);
-        final var authRequest = new UsernamePasswordAuthenticationToken(
-                loginData.getEmail(),
-                loginData.getPassword()
-        );
-        setDetails(request, authRequest);
-        return getAuthenticationManager().authenticate(authRequest);
-    }
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        final String authorizationHeader = request.getHeader("Authorization");
 
-    private LoginDto getLoginData(final HttpServletRequest request) throws AuthenticationException {
-        try {
-            final String json = request.getReader()
-                    .lines()
-                    .collect(Collectors.joining());
-            return MAPPER.readValue(json, LoginDto.class);
-        } catch (IOException e) {
-            throw new BadCredentialsException("Can't extract login data from request");
+        String jwt = null;
+        String userName = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer")) {
+            jwt = authorizationHeader.substring(7);
+            userName = jwtHelper.extractUsername(jwt);
         }
-    }
-
-    @Override
-    protected void successfulAuthentication(final HttpServletRequest request,
-                                            final HttpServletResponse response,
-                                            final FilterChain chain,
-                                            final Authentication authResult) throws IOException {
-        final UserDetails user = (UserDetails) authResult.getPrincipal();
-        final String token = jwtHelper.expiring(Map.of(SPRING_SECURITY_FORM_USERNAME_KEY, user.getUsername()));
-
-        response.getWriter().println(token);
+        if (userName != null) {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(userName);
+            if (jwtHelper.validateToken(jwt, userDetails)) {
+                UsernamePasswordAuthenticationToken token =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(token);
+            }
+        }
+        filterChain.doFilter(request, response);
     }
 }
+
+

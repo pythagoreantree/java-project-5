@@ -1,21 +1,21 @@
-server:
-  port: ${PORT:5000}
-
-base-url: /api
+base-url: ""
 
 spring:
   application:
-    name: taskManager
+    name: taskManagerTest
+
+  jpa:
+    show-sql: true
 
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/changelog-master.xml
 
   mvc:
-    hidden-method:
+    hiddenmethod:
       filter:
         enabled: true
 
-  jpa:
-    hibernate:
-      ddl-auto: update
+logging:
+  level:
+    root: INFO

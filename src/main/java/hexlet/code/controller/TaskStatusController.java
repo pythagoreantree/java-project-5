@@ -9,7 +9,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.AllArgsConstructor;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,15 +21,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
-
 import java.util.List;
 
 import static hexlet.code.controller.TaskStatusController.TASK_STATUS_CONTROLLER_PATH;
 import static org.springframework.http.HttpStatus.CREATED;
 
 @Tag(name = "Task status controller")
-@AllArgsConstructor
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("${base-url}" + TASK_STATUS_CONTROLLER_PATH)
 public class TaskStatusController {
@@ -61,8 +60,8 @@ public class TaskStatusController {
     // GET /api/statuses/{id} - получение статуса по идентификатору
     @Operation(summary = "Get task status by id")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Task status was found"),
-            @ApiResponse(responseCode = "404", description = "Task status with the id does not exist")
+        @ApiResponse(responseCode = "200", description = "Task status was found"),
+        @ApiResponse(responseCode = "404", description = "Task status with the id does not exist")
     })
     @GetMapping(ID)
     public TaskStatus getTaskStatusById(@PathVariable final Long id) {
@@ -73,8 +72,8 @@ public class TaskStatusController {
     // PUT /api/statuses/{id} - обновление статуса
     @Operation(summary = "Update task status by id")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Task status updated"),
-            @ApiResponse(responseCode = "404", description = "Task status with the id not found")
+        @ApiResponse(responseCode = "200", description = "Task status updated"),
+        @ApiResponse(responseCode = "404", description = "Task status with the id not found")
     })
     @PutMapping(ID)
     public TaskStatus updateTaskStatus(@PathVariable("id") final Long id,
@@ -87,8 +86,8 @@ public class TaskStatusController {
     // DELETE /api/statuses/{id} - удаление статуса
     @Operation(summary = "Delete a task status by id")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Task status deleted"),
-            @ApiResponse(responseCode = "404", description = "Task status with that id is not found")
+        @ApiResponse(responseCode = "200", description = "Task status deleted"),
+        @ApiResponse(responseCode = "404", description = "Task status with that id is not found")
     })
     @DeleteMapping(ID)
     public void deleteTaskStatus(@PathVariable("id") final long id) {

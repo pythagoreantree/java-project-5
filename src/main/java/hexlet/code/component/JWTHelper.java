@@ -1,63 +1,60 @@
 package hexlet.code.component;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Clock;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.impl.DefaultClock;
-import java.util.Date;
-import java.util.Map;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
-import static io.jsonwebtoken.SignatureAlgorithm.HS256;
-import static io.jsonwebtoken.impl.TextCodec.BASE64;
-
-@Component
+@Service
 public class JWTHelper {
 
-    private final String secretKey;
-    private final String issuer;
-    private final Long expirationSec;
-    private final Long clockSkewSec;
-    private final Clock clock;
+    @Value("${jwt.secret:secret}")
+    private String secret;
 
-    public JWTHelper(@Value("${jwt.issuer:spring_blog}") final String issuer,
-                     @Value("${jwt.expiration-sec:86400}") final Long expirationSec,
-                     @Value("${jwt.clock-skew-sec:300}") final Long clockSkewSec,
-                     @Value("${jwt.secret:secret}") final String secret) {
-        this.secretKey = BASE64.encode(secret);
-        this.issuer = issuer;
-        this.expirationSec = expirationSec;
-        this.clockSkewSec = clockSkewSec;
-        this.clock = DefaultClock.INSTANCE;
+    public <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimResolver.apply(claims);
     }
 
-    public String expiring(final Map<String, Object> attributes) {
-        return Jwts.builder()
-                .signWith(HS256, secretKey)
-                .setClaims(getClaims(attributes, expirationSec))
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+    }
+
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    public String generateToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        System.out.println(userDetails.getUsername());
+        return createToken(claims, userDetails.getUsername());
+    }
+
+    private String createToken(Map<String, Object> claims, String subject) {
+        return Jwts.builder().setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
+                .signWith(SignatureAlgorithm.HS256, secret)
                 .compact();
     }
 
-    public Map<String, Object> verify(final String token) {
-        return Jwts.parser()
-                .requireIssuer(issuer)
-                .setClock(clock)
-                .setAllowedClockSkewSeconds(clockSkewSec)
-                .setSigningKey(secretKey)
-                .parseClaimsJws(token)
-                .getBody();
+    public Boolean validateToken(String token, UserDetails userDetails) {
+        final String userName = extractUsername(token);
+        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
-
-    private Claims getClaims(final Map<String, Object> attributes, final Long expiresInSec) {
-        final Claims claims = Jwts.claims();
-        claims.setIssuer(issuer);
-        claims.setIssuedAt(clock.now());
-        claims.putAll(attributes);
-        if (expiresInSec > 0) {
-            claims.setExpiration(new Date(System.currentTimeMillis() + expiresInSec * 1000));
-        }
-        return claims;
-    }
-
 }

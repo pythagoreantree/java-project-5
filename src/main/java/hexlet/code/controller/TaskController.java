@@ -10,7 +10,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.AllArgsConstructor;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.querydsl.binding.QuerydslPredicate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,15 +24,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
-
 import static hexlet.code.controller.TaskController.TASK_CONTROLLER_PATH;
 import static org.springframework.http.HttpStatus.CREATED;
 
 @Tag(name = "Task controller")
 @RestController
 @RequestMapping("${base-url}" + TASK_CONTROLLER_PATH)
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class TaskController {
 
     private final TaskService taskService;
@@ -61,21 +60,21 @@ public class TaskController {
     }
 
     // GET /api/tasks/{id} - получение задачи по идентификатору
+    // PUT /api/tasks/{id} - обновление задачи
+
     @Operation(summary = "Get task by ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Task was found"),
-            @ApiResponse(responseCode = "404", description = "Task with this ID does not exist")
+        @ApiResponse(responseCode = "200", description = "Task was found"),
+        @ApiResponse(responseCode = "404", description = "Task with this ID does not exist")
     })
     @GetMapping(ID)
     public Task getTaskById(@PathVariable final Long id) {
         return taskService.getTaskById(id);
     }
-
-    // PUT /api/tasks/{id} - обновление задачи
     @Operation(summary = "Update task by ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Task updated"),
-            @ApiResponse(responseCode = "404", description = "Task with this ID not found")
+        @ApiResponse(responseCode = "200", description = "Task updated"),
+        @ApiResponse(responseCode = "404", description = "Task with this ID not found")
     })
     @PutMapping(ID)
     @PreAuthorize(ONLY_OWNER_BY_ID)
@@ -87,8 +86,8 @@ public class TaskController {
     // DELETE /api/tasks/{id} - удаление задачи
     @Operation(summary = "Delete a task by ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Task deleted"),
-            @ApiResponse(responseCode = "404", description = "Task with that ID is not found")
+        @ApiResponse(responseCode = "200", description = "Task deleted"),
+        @ApiResponse(responseCode = "404", description = "Task with that ID is not found")
     })
     @PreAuthorize(ONLY_OWNER_BY_ID)
     @DeleteMapping(ID)

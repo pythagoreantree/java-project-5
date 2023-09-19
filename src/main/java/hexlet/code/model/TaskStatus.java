@@ -1,32 +1,29 @@
 package hexlet.code.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.validation.constraints.NotBlank;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Date;
-import java.util.Set;
 
-import static javax.persistence.GenerationType.IDENTITY;
-import static javax.persistence.TemporalType.TIMESTAMP;
+import static jakarta.persistence.GenerationType.IDENTITY;
+import static jakarta.persistence.TemporalType.TIMESTAMP;
 
 @Entity
+@Table(name = "task_statuses")
+@Builder
 @Getter
 @Setter
-@Table(name = "task_statuses")
 @NoArgsConstructor
 @AllArgsConstructor
 public class TaskStatus {
@@ -44,9 +41,14 @@ public class TaskStatus {
     @Column(name = "created_at")
     private Date createdAt;
 
+/*
     @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY,
             mappedBy = "taskStatus")
-    private Set<Task> tasks;
+    private Set<Task> tasks;*/
+
+    public TaskStatus(String name) {
+        this.name = name;
+    }
 
 }
