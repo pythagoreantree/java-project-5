@@ -3,7 +3,7 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/1ba7ec8aefd36ac4f44d/maintainability)](https://codeclimate.com/github/ilshatshamsetdinov/java-project-73/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/1ba7ec8aefd36ac4f44d/test_coverage)](https://codeclimate.com/github/ilshatshamsetdinov/java-project-73/test_coverage)
 
-<b><p><a href="https://taskmanager-mxga.onrender.com">Deployed App link</a></p></b>
+<b><p><a href="https://tm-svc.onrender.com">Deployed App link</a></p></b>
 Документация Swagger: https://taskmanager-mxga.onrender.com/swagger-ui/index.html?configUrl=/swagger.html/swagger-config
 
 Task Manager – система управления задачами. Она позволяет ставить задачи, назначать исполнителей и менять их статусы. Для работы с системой требуется регистрация и аутентификация.
