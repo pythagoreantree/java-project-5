@@ -1,9 +1,9 @@
-FROM gradle:7.4.0-jdk17
+FROM eclipse-temurin:20-jdk
 
 WORKDIR /app
 
-COPY / .
+COPY ./ .
 
-RUN gradle installDist
+RUN ./gradlew installDist
 
-CMD ./build/install/app/bin/app
+CMD build/install/app/bin/app
