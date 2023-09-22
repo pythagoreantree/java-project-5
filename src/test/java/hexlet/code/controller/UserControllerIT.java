@@ -8,7 +8,6 @@ import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
 import hexlet.code.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,7 +64,7 @@ public class UserControllerIT {
     }
 
     @Test
-    @Disabled
+//    @Disabled
     public void getUserById() throws Exception {
         utils.regDefaultUser();
         final User expectedUser = userRepository.findAll().get(0);
