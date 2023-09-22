@@ -78,6 +78,12 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
+jacocoTestReport {
+	reports {
+		xml.required = true
+	}
+}
+
 compileJava {
 	options.release = 20
 	options.encoding = 'UTF-8'
